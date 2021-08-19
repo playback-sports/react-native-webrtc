@@ -31,17 +31,17 @@ IOS_BUILD_ARCHS = [
     'x64'
 ]
 MACOS_ARCH_MAP = {
-    'x64'  : 'macos-x86_64'
+    'arm64'  : 'macos-arm64'
 }
 MACOS_BUILD_ARCHS = [
-    'x64'
+    'arm64'
 ]
 
 def build_gn_args(platform_args):
     return "--args='" + ' '.join(GN_COMMON_ARGS + platform_args) + "'"
 
 GN_COMMON_ARGS = [
-    # Xcode 12 Clang consider warning as error by default 
+    # Xcode 12 Clang consider warning as error by default
     # See https://bugs.chromium.org/p/webrtc/issues/detail?id=11729
     'treat_warnings_as_errors=false',
     'is_component_build=false',
@@ -325,4 +325,3 @@ if __name__ == "__main__":
         build(target_dir, platform, args.debug)
         print('WebRTC build for %s completed in %s' % (platform, target_dir))
         sys.exit(0)
-
