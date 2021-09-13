@@ -164,16 +164,17 @@
     }
   }
 
-  // Force unified plan for sdpSemantics
-  config.sdpSemantics = RTCSdpSemanticsUnifiedPlan;
-  // if (json[@"sdpSemantics"] != nil && [json[@"sdpSemantics"] isKindOfClass:[NSString class]]) {
-  //     NSString *sdpSemantics = json[@"sdpSemantics"];
-  //     if ([sdpSemantics isEqualToString:@"unified-plan"]) {
-  //         config.sdpSemantics = RTCSdpSemanticsUnifiedPlan;
-  //     } else if ([sdpSemantics isEqualToString:@"plan-b"]) {
-  //         config.sdpSemantics = RTCSdpSemanticsPlanB;
-  //     }
-  // }
+  // Allow unified plan, with fallback to plan b
+  if (json[@"sdpSemantics"] != nil && [json[@"sdpSemantics"] isKindOfClass:[NSString class]]) {
+      NSString *sdpSemantics = json[@"sdpSemantics"];
+      if ([sdpSemantics isEqualToString:@"unified-plan"]) {
+          config.sdpSemantics = RTCSdpSemanticsUnifiedPlan;
+      } else if ([sdpSemantics isEqualToString:@"plan-b"]) {
+          config.sdpSemantics = RTCSdpSemanticsPlanB;
+      }
+  } else {
+    config.sdpSemantics = RTCSdpSemanticsPlanB;
+  }
 
   return config;
 }
