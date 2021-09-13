@@ -241,11 +241,22 @@ class GetUserMediaImpl {
         }
     }
 
-    void switchCamera(String trackId) {
+    void switchCamera(String trackId, CameraCaptureController.SwitchCameraHandler handler) throws Exception {
         TrackPrivate track = tracks.get(trackId);
         if (track != null && track.videoCaptureController instanceof CameraCaptureController) {
             CameraCaptureController cameraCaptureController = (CameraCaptureController) track.videoCaptureController;
-            cameraCaptureController.switchCamera();
+            cameraCaptureController.switchCamera(handler);
+        }
+    }
+
+    String getCameraFacingMode(String trackId) throws Exception {
+        TrackPrivate track = tracks.get(trackId);
+        if (track != null && track.videoCaptureController instanceof CameraCaptureController) {
+            CameraCaptureController cameraCaptureController = (CameraCaptureController) track.videoCaptureController;
+            return cameraCaptureController.facingMode();
+        }
+        else {
+            throw new Exception("Track not found when attempting to get camera facing mode");
         }
     }
 

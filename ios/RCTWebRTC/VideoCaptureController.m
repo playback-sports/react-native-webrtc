@@ -118,11 +118,16 @@
     dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
 }
 
--(void)switchCamera {
+-(NSString *)switchCamera {
     _usingFrontCamera = !_usingFrontCamera;
     _deviceId = NULL;
 
     [self startCapture];
+    return [self facingMode];
+}
+
+-(NSString *)facingMode {
+    return _usingFrontCamera ? @"user" : @"environment";
 }
 
 -(int)frameRate {

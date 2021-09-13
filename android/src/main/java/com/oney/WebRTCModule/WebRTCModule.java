@@ -2,6 +2,8 @@ package com.oney.WebRTCModule;
 
 import androidx.annotation.Nullable;
 
+import android.content.Context;
+import android.media.AudioManager;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -453,6 +455,16 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
     }
 
     MediaStream getStreamForReactTag(String streamReactTag) {
+        try {
+            return ThreadUtils.runOnExecutorAndWait(() -> getStreamForReactTagAsync(streamReactTag));
+        } catch (Exception e) {
+            Log.d(TAG, "getStreamForReactTag() failed");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    MediaStream getStreamForReactTagAsync(String streamReactTag) {
         MediaStream stream = localStreams.get(streamReactTag);
 
         if (stream == null) {
@@ -658,11 +670,44 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
         getUserMediaImpl.mediaStreamTrackSetEnabled(id, enabled);
     }
 
+    private static final String SWITCH_CAMERA_ERROR = "SWITCH_CAMERA_ERROR";
+
     @ReactMethod
-    public void mediaStreamTrackSwitchCamera(String id) {
+    public void mediaStreamTrackSwitchCamera(String id, Promise promise) {
         MediaStreamTrack track = getLocalTrack(id);
         if (track != null) {
-            getUserMediaImpl.switchCamera(id);
+            try {
+                getUserMediaImpl.switchCamera(id, new CameraCaptureController.SwitchCameraHandler() {
+                    @Override
+                    public void onSwitchCameraDone(String facingMode) {
+                        promise.resolve(facingMode);
+                    }
+                });
+            }
+            catch (Exception e) {
+                promise.reject(SWITCH_CAMERA_ERROR, e);
+            }
+        }
+        else {
+            promise.reject(SWITCH_CAMERA_ERROR, "Local track not found when attempting to switch camera");
+        }
+    }
+
+    private static final String GET_CAMERA_FACING_MODE_ERROR = "GET_CAMERA_FACING_MODE_ERROR";
+
+    @ReactMethod
+    public void mediaStreamTrackGetCameraFacingMode(String id, Promise promise) {
+        MediaStreamTrack track = getLocalTrack(id);
+        if (track != null) {
+            try {
+                promise.resolve(getUserMediaImpl.getCameraFacingMode(id));
+            }
+            catch (Exception e) {
+                promise.reject(GET_CAMERA_FACING_MODE_ERROR, e);
+            }
+        }
+        else {
+            promise.reject(GET_CAMERA_FACING_MODE_ERROR, "Local track not found when attempting to get camera facing mode");
         }
     }
 
@@ -1254,7 +1299,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
                 callback.invoke(false, "invalid trackId and type");
                 return;
             }
-            
+
             WritableMap res = Arguments.createMap();
             res.putString("id", transceiverId);
             res.putMap("state", this.serializeState(id));
@@ -1345,6 +1390,36 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
         } else {
             Log.d(TAG, "peerConnectionTransceiverSetDirection() peerConnection is null");
             callback.invoke(false, "peerConnection is null");
+        }
+    }
+
+    /// Daily-specific functionality
+
+    private  DailyAudioManager dailyAudioManager;
+
+    @ReactMethod
+    public void setDailyAudioMode(String audioModeString) {
+        Log.d(TAG, "setDailyAudioMode: " + audioModeString);
+        DailyAudioManager.Mode audioMode;
+        switch (audioModeString) {
+            case "video":
+                audioMode = DailyAudioManager.Mode.VIDEO_CALL;
+                break;
+            case "voice":
+                audioMode = DailyAudioManager.Mode.VOICE_CALL;
+                break;
+            case "idle":
+                audioMode = DailyAudioManager.Mode.IDLE;
+                break;
+            default:
+                throw new IllegalArgumentException(audioModeString);
+        }
+        if (dailyAudioManager == null) {
+            ReactApplicationContext reactContext = getReactApplicationContext();
+            dailyAudioManager = new DailyAudioManager(reactContext, audioMode);
+        }
+        else {
+            dailyAudioManager.setMode(audioMode);
         }
     }
 }
