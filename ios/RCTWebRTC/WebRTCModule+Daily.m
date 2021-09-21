@@ -64,7 +64,7 @@ RCT_EXPORT_METHOD(enableNoOpRecordingEnsuringBackgroundContinuity:(BOOL)enable) 
   if (enable) {
     [RTCAudioSession.sharedInstance addDelegate:self];
   }
-  
+
   dispatch_async(self.captureSessionQueue, ^{
     if (enable) {
       if (self.captureSession) {
@@ -87,21 +87,21 @@ RCT_EXPORT_METHOD(enableNoOpRecordingEnsuringBackgroundContinuity:(BOOL)enable) 
   // Don't automatically configure application audio session, to prevent
   // configuration "thrashing" once WebRTC audio unit takes the reins.
   captureSession.automaticallyConfiguresApplicationAudioSession = NO;
-  AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
-  if (!audioDevice) {
-    return nil;
-  }
-  NSError *inputError;
-  AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioDevice error:&inputError];
-  if (inputError) {
-    return nil;
-  }
-  if ([captureSession canAddInput:audioInput]) {
-    [captureSession addInput:audioInput];
-  }
-  else {
-    return nil;
-  }
+  // AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
+  // if (!audioDevice) {
+  //   return nil;
+  // }
+  // NSError *inputError;
+  // AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioDevice error:&inputError];
+  // if (inputError) {
+  //   return nil;
+  // }
+  // if ([captureSession canAddInput:audioInput]) {
+  //   [captureSession addInput:audioInput];
+  // }
+  // else {
+  //   return nil;
+  // }
   AVCaptureAudioDataOutput *audioOutput = [[AVCaptureAudioDataOutput alloc] init];
   if ([captureSession canAddOutput:audioOutput]) {
     [captureSession addOutput:audioOutput];
@@ -138,9 +138,9 @@ RCT_EXPORT_METHOD(setDailyAudioMode:(NSString *)audioMode) {
     NSLog(@"[Daily] invalid argument to setDailyAudioMode: %@", audioMode);
     return;
   }
-  
+
   self.audioMode = audioMode;
-  
+
   // Apply the chosen audio mode right away if the audio session is already
   // active. Otherwise, it will be applied when the session becomes active.
   RTCAudioSession *audioSession = RTCAudioSession.sharedInstance;
@@ -155,9 +155,9 @@ RCT_EXPORT_METHOD(setDailyAudioMode:(NSString *)audioMode) {
   if ([audioMode isEqualToString:AUDIO_MODE_IDLE]) {
     return;
   }
-  
+
   [audioSession lockForConfiguration];
-  
+
   RTCAudioSessionConfiguration *config = [[RTCAudioSessionConfiguration alloc] init];
   config.category = AVAudioSessionCategoryPlayAndRecord;
   config.mode = ([audioMode isEqualToString:AUDIO_MODE_VIDEO_CALL] ?
@@ -172,12 +172,12 @@ RCT_EXPORT_METHOD(setDailyAudioMode:(NSString *)audioMode) {
     categoryOptions |= AVAudioSessionCategoryOptionDefaultToSpeaker;
   }
   config.categoryOptions = categoryOptions;
-  
+
   NSError *error;
   [audioSession setConfiguration:config error:&error];
-  
+
   [audioSession unlockForConfiguration];
-  
+
   if (error) {
     NSLog(@"[Daily] error applying in-call audio mode %@: %@", audioMode, error);
   }
