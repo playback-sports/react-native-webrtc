@@ -440,6 +440,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
+    }
 
     private void peerConnectionInitAsync(
             PeerConnection.RTCConfiguration configuration,
