@@ -431,7 +431,8 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
             ThreadUtils.runOnExecutor(() -> peerConnectionInitAsync(rtcConfiguration, id));
 
             ThreadUtils.submitToExecutor(() -> {
-                PeerConnectionObserver observer = new PeerConnectionObserver(this, id);
+                PeerConnectionObserver observer = new PeerConnectionObserver(this,
+                id, rtcConfiguration.sdpSemantics == PeerConnection.SdpSemantics.UNIFIED_PLAN);
                 PeerConnection peerConnection = mFactory.createPeerConnection(rtcConfiguration, observer);
                 observer.setPeerConnection(peerConnection);
                 mPeerConnectionObservers.put(id, observer);
