@@ -431,7 +431,8 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
             ThreadUtils.runOnExecutor(() -> peerConnectionInitAsync(rtcConfiguration, id));
 
             ThreadUtils.submitToExecutor(() -> {
-                PeerConnectionObserver observer = new PeerConnectionObserver(this, id);
+                PeerConnectionObserver observer = new PeerConnectionObserver(this,
+                id, rtcConfiguration.sdpSemantics == PeerConnection.SdpSemantics.UNIFIED_PLAN);
                 PeerConnection peerConnection = mFactory.createPeerConnection(rtcConfiguration, observer);
                 observer.setPeerConnection(peerConnection);
                 mPeerConnectionObservers.put(id, observer);
@@ -440,6 +441,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
+    }
 
     private void peerConnectionInitAsync(
             PeerConnection.RTCConfiguration configuration,
@@ -451,7 +453,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
 
         observer.setPeerConnection(peerConnection);
         mPeerConnectionObservers.put(id, observer);
->>>>>>> 717ed34 (api: Adding and stopping Transceiver (android + js))
     }
 
     MediaStream getStreamForReactTag(String streamReactTag) {
@@ -975,7 +976,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
                                               int id,
                                               Callback callback) {
         ThreadUtils.runOnExecutor(() -> {
-            peerConnectionAddICECandidateAsync(candidateMap, id, callback);
             PeerConnection peerConnection = getPeerConnection(id);
             if (peerConnection == null) {
                 Log.d(TAG, "peerConnectionAddICECandidate() peerConnection is null");
