@@ -115,6 +115,13 @@ export default class MediaStream extends defineCustomEventTarget(...MEDIA_STREAM
         return this._tracks.filter(track => track.kind === 'video');
     }
 
+    setVolume(volume: number): void {
+        const audioTracks = this.getAudioTracks();
+        audioTracks.forEach(track => {
+            WebRTCModule.mediaStreamTrackSetVolume(track.id, volume);
+        });
+    }
+
     clone() {
         throw new Error('Not implemented.');
     }

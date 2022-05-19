@@ -7,6 +7,7 @@
 
 #import <objc/runtime.h>
 
+#import <WebRTC/RTCAudioSource.h>
 #import <WebRTC/RTCCameraVideoCapturer.h>
 #import <WebRTC/RTCVideoTrack.h>
 #import <WebRTC/RTCMediaConstraints.h>
@@ -327,6 +328,21 @@ RCT_EXPORT_METHOD(mediaStreamTrackGetCameraFacingMode:(nonnull NSString *)trackI
   reject(@"get_camera_facing_mode_error",
          @"Local track not found when attempting to get camera facing mode",
          nil);
+}
+
+RCT_EXPORT_METHOD(mediaStreamTrackSetVolume:(nonnull NSString *)trackID : (double)volume)
+{
+  for (NSNumber *peerConnectionId in self.peerConnections) {
+    RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
+    for (NSString *reactTag in peerConnection.remoteStreams) {
+      RTCMediaStream *stream = peerConnection.remoteStreams[reactTag];
+      for (RTCAudioTrack *track in stream.audioTracks) {
+        if ([track.trackId isEqualToString:trackID]) {
+          track.source.volume = volume;
+        }
+      }
+    }
+  }
 }
 
 @end
