@@ -48,5 +48,6 @@ static NSString *const kEventMediaDevicesOnDeviceChange = @"mediaDevicesOnDevice
                         decoderFactory:(id<RTCVideoDecoderFactory>)decoderFactory;
 
 - (RTCMediaStream*)streamForReactTag:(NSString*)reactTag;
+- (RTCMediaStreamTrack*)trackForId:(NSString*)trackId;
 
 @end

@@ -167,6 +167,15 @@
     }
   }
 
+  if (json[@"sdpSemantics"] != nil && [json[@"sdpSemantics"] isKindOfClass:[NSString class]]) {
+    NSString *sdpSemantics = json[@"sdpSemantics"];
+    if ([sdpSemantics isEqualToString:@"unified-plan"]) {
+        config.sdpSemantics = RTCSdpSemanticsUnifiedPlan;
+    } else if ([sdpSemantics isEqualToString:@"plan-b"]) {
+        config.sdpSemantics = RTCSdpSemanticsPlanB;
+    }
+  }
+
   return config;
 }
 

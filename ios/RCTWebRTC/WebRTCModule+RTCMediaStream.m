@@ -151,7 +151,7 @@ RCT_EXPORT_METHOD(getUserMedia:(NSDictionary *)constraints
     NSString *trackId = track.trackId;
 
     self.localTracks[trackId] = track;
-    
+
     NSDictionary *settings = @{};
     if ([track.kind isEqualToString:@"video"]) {
         RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
@@ -327,23 +327,6 @@ RCT_EXPORT_METHOD(mediaStreamTrackGetCameraFacingMode:(nonnull NSString *)trackI
   reject(@"get_camera_facing_mode_error",
          @"Local track not found when attempting to get camera facing mode",
          nil);
-}
-
-#pragma mark - Helpers
-
-- (RTCMediaStreamTrack*)trackForId:(NSString*)trackId
-{
-  RTCMediaStreamTrack *track = self.localTracks[trackId];
-  if (!track) {
-    for (NSNumber *peerConnectionId in self.peerConnections) {
-      RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
-      track = peerConnection.remoteTracks[trackId];
-      if (track) {
-        break;
-      }
-    }
-  }
-  return track;
 }
 
 @end
