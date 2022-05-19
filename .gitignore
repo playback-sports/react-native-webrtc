@@ -7,6 +7,7 @@ project.xcworkspace
 .idea
 android/build
 android/*.iml
+android/.gradle
 daily-co-*.tgz
 
 WebRTC.xcframework
