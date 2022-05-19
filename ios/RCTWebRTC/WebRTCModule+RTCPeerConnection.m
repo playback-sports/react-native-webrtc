@@ -679,6 +679,20 @@ RCT_EXPORT_METHOD(peerConnectionRestartIce:(nonnull NSNumber *)objectID)
     return RTCRtpTransceiverDirectionSendRecv;
 }
 
+- (NSDictionary *)extractReceiver:(RTCRtpReceiver *)receiver {
+    return @{
+        @"id": receiver.receiverId,
+        @"track": @{
+            @"id": receiver.track.trackId,
+            @"kind": receiver.track.kind,
+            @"label": receiver.track.trackId,
+            @"enabled": @(receiver.track.isEnabled),
+            @"remote": @(YES),
+            @"readyState": @"live"
+        }
+    };
+}
+
 - (NSDictionary *)extractTransceiver:(RTCRtpTransceiver *)transceiver {
     NSMutableDictionary *res = [NSMutableDictionary dictionary];
     [res setValue: transceiver.sender.senderId forKey:@"id"];
@@ -687,17 +701,7 @@ RCT_EXPORT_METHOD(peerConnectionRestartIce:(nonnull NSNumber *)objectID)
     }
     [res setValue:[self stringForTransceiverDirection: transceiver.direction] forKey:@"direction"];
     [res setValue: (transceiver.isStopped ? @YES : @NO) forKey:@"isStopped"];
-    [res setValue:@{
-        @"id": transceiver.receiver.receiverId,
-        @"track": @{
-                @"id": transceiver.receiver.track.trackId,
-                @"kind": transceiver.receiver.track.kind,
-                @"label": transceiver.receiver.track.trackId,
-                @"enabled": @(transceiver.receiver.track.isEnabled),
-                @"remote": @(YES),
-                @"readyState": @"live"
-        }
-    } forKey: @"receiver"];
+    [res setValue: [self extractReceiver:transceiver.receiver] forKey: @"receiver"];
     return res;
 }
 
@@ -713,6 +717,27 @@ RCT_EXPORT_METHOD(peerConnectionRestartIce:(nonnull NSNumber *)objectID)
     return res;
 }
 
+- (NSMutableArray *)extractTracks:(RTCPeerConnection *)peerConnection stream:(RTCMediaStream *)stream streamReactTag:(NSString*)streamReactTag {
+    NSMutableArray *tracks = [NSMutableArray array];
+    for (RTCVideoTrack *track in stream.videoTracks) {
+        peerConnection.remoteTracks[track.trackId] = track;
+
+        // Only add to adapter if it doesn't exist there already. Warnings will be
+        // thrown without this conditional
+        if ([peerConnection.videoTrackAdapters objectForKey:track.trackId] == nil) {
+            [peerConnection addVideoTrackAdapter:streamReactTag track:track];
+        }
+
+        [tracks addObject:@{@"id": track.trackId, @"kind": track.kind, @"label": track.trackId, @"enabled": @(track.isEnabled), @"remote": @(YES), @"readyState": @"live"}];
+    }
+
+    for (RTCAudioTrack *track in stream.audioTracks) {
+        peerConnection.remoteTracks[track.trackId] = track;
+        [tracks addObject:@{@"id": track.trackId, @"kind": track.kind, @"label": track.trackId, @"enabled": @(track.isEnabled), @"remote": @(YES), @"readyState": @"live"}];
+    }
+    return tracks;
+}
+
 #pragma mark - RTCPeerConnectionDelegate methods
 
 - (void)peerConnection:(RTCPeerConnection *)peerConnection didChangeSignalingState:(RTCSignalingState)newState {
@@ -724,17 +749,8 @@ RCT_EXPORT_METHOD(peerConnectionRestartIce:(nonnull NSNumber *)objectID)
 }
 
 - (void)peerConnection:(RTCPeerConnection *)peerConnection didAddStream:(RTCMediaStream *)stream {
-  NSString *streamReactTag = [[NSUUID UUID] UUIDString];
-  NSMutableArray *tracks = [NSMutableArray array];
-  for (RTCVideoTrack *track in stream.videoTracks) {
-    peerConnection.remoteTracks[track.trackId] = track;
-    [peerConnection addVideoTrackAdapter:streamReactTag track:track];
-    [tracks addObject:@{@"id": track.trackId, @"kind": track.kind, @"label": track.trackId, @"enabled": @(track.isEnabled), @"remote": @(YES), @"readyState": @"live"}];
-  }
-  for (RTCAudioTrack *track in stream.audioTracks) {
-    peerConnection.remoteTracks[track.trackId] = track;
-    [tracks addObject:@{@"id": track.trackId, @"kind": track.kind, @"label": track.trackId, @"enabled": @(track.isEnabled), @"remote": @(YES), @"readyState": @"live"}];
-  }
+  NSString *streamReactTag = stream.streamId;
+  NSMutableArray *tracks = [self extractTracks:peerConnection stream:stream streamReactTag:streamReactTag];
 
   peerConnection.remoteStreams[streamReactTag] = stream;
 
@@ -789,6 +805,31 @@ RCT_EXPORT_METHOD(peerConnectionRestartIce:(nonnull NSNumber *)objectID)
                        @"streamId": streamReactTag,
                        @"sdp": newSdp
                      }];
+}
+
+- (void)peerConnection:(RTCPeerConnection *)peerConnection didAddReceiver:(nonnull RTCRtpReceiver *)rtpReceiver streams:(nonnull NSArray<RTCMediaStream *> *)mediaStreams {
+    NSMutableArray *streams = [NSMutableArray array];
+    for (RTCMediaStream *stream in mediaStreams) {
+        NSMutableArray *tracks = [self extractTracks:peerConnection stream:stream streamReactTag:stream.streamId];
+        [streams addObject:@{@"streamId": stream.streamId, @"streamReactTag": stream.streamId, @"tracks": tracks}];
+    }
+
+    [self sendEventWithName:kEventPeerConnectionAddedReceiver
+        body:@{
+            @"id": peerConnection.reactTag,
+            @"receiver": [self extractReceiver:rtpReceiver],
+            @"streams": streams
+        }
+    ];
+}
+
+- (void)peerConnection:(RTCPeerConnection *)peerConnection didStartReceivingOnTransceiver:(nonnull RTCRtpTransceiver *)transceiver {
+    [self sendEventWithName:kEventPeerConnectionStartedReceivingOnTransceiver
+        body:@{
+            @"id": peerConnection.reactTag,
+            @"transceiver": [self extractTransceiver: transceiver],
+        }
+    ];
 }
 
 - (void)peerConnectionShouldNegotiate:(RTCPeerConnection *)peerConnection {

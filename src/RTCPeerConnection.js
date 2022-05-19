@@ -48,6 +48,7 @@ const PEER_CONNECTION_EVENTS = [
     'icegatheringstatechange',
     'negotiationneeded',
     'signalingstatechange',
+    'track',
     'datachannel',
     'addstream',
     'removestream'
@@ -330,6 +331,23 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
                 this._remoteStreams.push(stream);
                 this.remoteDescription = new RTCSessionDescription(ev.sdp);
                 this.dispatchEvent(new MediaStreamEvent('addstream', { stream }));
+            }),
+            EventEmitter.addListener('peerConnectionStartedReceivingOnTransceiver', ev => {
+                if (ev.id !== this._peerConnectionId) {
+                    return;
+                }
+                this._getTransceiver(ev.transceiver);
+            }),
+            EventEmitter.addListener('peerConnectionAddedReceiver', ev => {
+                if (ev.id !== this._peerConnectionId) {
+                    return;
+                }
+                if (!ev.streams.length || !ev.receiver) {
+                    return;
+                }
+                const streams = ev.streams;
+                const track = ev.receiver.track;
+                this.dispatchEvent(new MediaStreamTrackEvent('track', { track, streams }));
             }),
             EventEmitter.addListener('peerConnectionRemovedStream', ev => {
                 if (ev.id !== this._peerConnectionId) {

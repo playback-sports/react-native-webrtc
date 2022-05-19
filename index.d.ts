@@ -152,6 +152,8 @@ export class RTCPeerConnection {
     onnegotiationneeded: () => void | undefined;
     onsignalingstatechange: () => void | undefined;
 
+    ontrack: () => void;
+
     onaddstream: (event: EventOnAddStream) => void | undefined;
     onremovestream: () => void | undefined;
 
