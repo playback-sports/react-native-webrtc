@@ -1,14 +1,14 @@
 {
-  "name": "@daily-co/react-native-webrtc",
-  "version": "1.94.1-daily.4",
+  "name": "@playback-sports/react-native-webrtc",
+  "version": "1.94.1-playback.1",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daily-co/react-native-webrtc.git"
+    "url": "git+https://github.com/playback-sports/react-native-webrtc.git"
   },
   "nativePackage": true,
-  "description": "Daily fork of WebRTC for React Native",
+  "description": "Playback fork of Daily's fork of WebRTC for React Native",
   "license": "MIT",
-  "homepage": "https://github.com/daily-co/react-native-webrtc",
+  "homepage": "https://github.com/playback-sports/react-native-webrtc",
   "types": "index.d.ts",
   "keywords": [
     "react-component",
@@ -19,12 +19,12 @@
   ],
   "main": "src/index.js",
   "dependencies": {
+    "@types/react": "*",
+    "@types/react-native": "*",
     "base64-js": "1.5.1",
     "event-target-shim": "6.0.2",
     "tar": "6.1.11",
-    "uuid": "3.4.0",
-    "@types/react": "*",
-    "@types/react-native": "*"
+    "uuid": "3.4.0"
   },
   "peerDependencies": {
     "react-native": ">=0.60.0"
@@ -36,7 +36,7 @@
     "prepare": "husky install"
   },
   "bugs": {
-    "url": "https://github.com/daily-co/react-native-webrtc/issues"
+    "url": "https://github.com/playback-sports/react-native-webrtc/issues"
   },
   "devDependencies": {
     "husky": "7.0.2",
