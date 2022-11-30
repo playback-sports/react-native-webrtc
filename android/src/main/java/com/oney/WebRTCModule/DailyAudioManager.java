@@ -6,7 +6,6 @@ import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
-import android.os.Build;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -14,12 +13,11 @@ import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+import com.oney.WebRTCModule.DailyWebRTCDevicesManager.AudioDeviceType;
 
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import com.oney.WebRTCModule.DailyWebRTCDevicesManager.AudioDeviceType;
 
 public class DailyAudioManager implements AudioManager.OnAudioFocusChangeListener {
     static final String TAG = DailyAudioManager.class.getCanonicalName();
@@ -172,35 +170,25 @@ public class DailyAudioManager implements AudioManager.OnAudioFocusChangeListene
     }
 
     private void requestAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            AudioAttributes attributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build();
-            audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                    .setAudioAttributes(attributes)
-                    .setAcceptsDelayedFocusGain(true)
-                    .setOnAudioFocusChangeListener(this)
-                    .build();
-            audioManager.requestAudioFocus(audioFocusRequest);
-        } else {
-            audioManager.requestAudioFocus(this,
-                    AudioManager.STREAM_VOICE_CALL,
-                    AudioManager.AUDIOFOCUS_GAIN);
-        }
+        AudioAttributes attributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build();
+        audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(attributes)
+                .setAcceptsDelayedFocusGain(true)
+                .setOnAudioFocusChangeListener(this)
+                .build();
+        audioManager.requestAudioFocus(audioFocusRequest);
     }
 
     private void abandonAudioFocus() {
         Log.d(TAG, "abandonAudioFocus");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (audioFocusRequest == null) {
-                Log.d(TAG, "abandonAudioFocus: expected audioFocusRequest to exist");
-                return;
-            }
-            audioManager.abandonAudioFocusRequest(audioFocusRequest);
-        } else {
-            audioManager.abandonAudioFocus(this);
+        if (audioFocusRequest == null) {
+            Log.d(TAG, "abandonAudioFocus: expected audioFocusRequest to exist");
+            return;
         }
+        audioManager.abandonAudioFocusRequest(audioFocusRequest);
     }
 
     private void configureDevicesForCurrentMode() {

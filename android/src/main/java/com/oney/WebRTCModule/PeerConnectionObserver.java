@@ -2,7 +2,6 @@ package com.oney.WebRTCModule;
 
 import android.util.Base64;
 import android.util.Log;
-import android.util.SparseArray;
 
 import androidx.annotation.Nullable;
 
@@ -19,10 +18,10 @@ import org.webrtc.MediaStream;
 import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnection;
 import org.webrtc.RtpReceiver;
+import org.webrtc.RtpTransceiver;
 import org.webrtc.SessionDescription;
 import org.webrtc.VideoTrack;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -37,16 +36,20 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     private final Map<String, DataChannelWrapper> dataChannels;
     private final int id;
+    private int transceiverNextId = 0;
+
     private PeerConnection peerConnection;
     final List<MediaStream> localStreams;
     final Map<String, MediaStream> remoteStreams;
     final Map<String, MediaStreamTrack> remoteTracks;
-    private final VideoTrackAdapter videoTrackAdapters;
+    final boolean isUnifiedPlan;
+    final VideoTrackAdapter videoTrackAdapters;
     private final WebRTCModule webRTCModule;
 
-    PeerConnectionObserver(WebRTCModule webRTCModule, int id) {
+    PeerConnectionObserver(WebRTCModule webRTCModule, int id, boolean isUnifiedPlan) {
         this.webRTCModule = webRTCModule;
         this.id = id;
+        this.isUnifiedPlan = isUnifiedPlan;
         this.dataChannels = new HashMap<>();
         this.localStreams = new ArrayList<>();
         this.remoteStreams = new HashMap<>();
@@ -89,6 +92,35 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         }
 
         return localStreams.remove(localStream);
+    }
+
+    String addTransceiver(MediaStreamTrack.MediaType mediaType, RtpTransceiver.RtpTransceiverInit init) {
+        if (peerConnection == null) {
+            throw new Error("Impossible");
+        }
+        RtpTransceiver transceiver = peerConnection.addTransceiver(mediaType, init);
+        return this.resolveTransceiverId(transceiver);
+    }
+
+    String addTransceiver(MediaStreamTrack track, RtpTransceiver.RtpTransceiverInit init) {
+        if (peerConnection == null) {
+            throw new Error("Impossible");
+        }
+        RtpTransceiver transceiver = peerConnection.addTransceiver(track, init);
+        return this.resolveTransceiverId(transceiver);
+    }
+
+    String resolveTransceiverId(RtpTransceiver transceiver) {
+        return transceiver.getSender().id();
+    }
+
+    RtpTransceiver getTransceiver(String id) {
+        for (RtpTransceiver transceiver : this.peerConnection.getTransceivers()) {
+            if (transceiver.getSender().id().equals(id)) {
+                return transceiver;
+            }
+        }
+        throw new Error("Unable to find transceiver");
     }
 
     PeerConnection getPeerConnection() {
@@ -164,7 +196,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         if (dataChannel == null) {
             return null;
         }
-        final String reactTag  = UUID.randomUUID().toString();
+        final String reactTag = UUID.randomUUID().toString();
         DataChannelWrapper dcw = new DataChannelWrapper(webRTCModule, id, reactTag, dataChannel);
         dataChannels.put(reactTag, dcw);
         dataChannel.registerObserver(dcw);
@@ -410,7 +442,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     @Override
     public void onDataChannel(DataChannel dataChannel) {
-        final String reactTag  = UUID.randomUUID().toString();
+        final String reactTag = UUID.randomUUID().toString();
         DataChannelWrapper dcw = new DataChannelWrapper(webRTCModule, id, reactTag, dataChannel);
         dataChannels.put(reactTag, dcw);
         dataChannel.registerObserver(dcw);
@@ -455,6 +487,15 @@ class PeerConnectionObserver implements PeerConnection.Observer {
     @Override
     public void onAddTrack(final RtpReceiver receiver, final MediaStream[] mediaStreams) {
         Log.d(TAG, "onAddTrack");
+        if (isUnifiedPlan) {
+            MediaStreamTrack track = receiver.track();
+            if (track != null) {
+                if (track.kind().equals(MediaStreamTrack.VIDEO_TRACK_KIND)) {
+                    videoTrackAdapters.addAdapter(UUID.randomUUID().toString(), (VideoTrack) track);
+                }
+                remoteTracks.put(track.id(), track);
+            }
+        }
     }
 
     @Nullable

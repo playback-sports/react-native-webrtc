@@ -8,6 +8,7 @@ project.xcworkspace
 android/build
 android/*.iml
 android/.gradle
+android/local.properties
 daily-co-*.tgz
 
 WebRTC.xcframework
@@ -16,3 +17,4 @@ examples/GumTestApp/package-lock.json
 examples/GumTestApp_macOS/package-lock.json
 *.jar
 *.tgz
+
