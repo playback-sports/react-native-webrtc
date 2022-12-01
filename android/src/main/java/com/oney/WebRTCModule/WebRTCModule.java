@@ -432,7 +432,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
         return conf;
     }
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     public void peerConnectionInit(ReadableMap configuration, int id) {
         PeerConnection.RTCConfiguration rtcConfiguration
                 = parseRTCConfiguration(configuration);
@@ -943,13 +943,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
     private ReadableMap serializeTrack(MediaStreamTrack track) {
         WritableMap trackInfo = Arguments.createMap();
         trackInfo.putString("id", track.id());
-        if (track.kind().equals("video")) {
-            trackInfo.putString("label", "Video");
-        } else if (track.kind().equals("audio")) {
-            trackInfo.putString("label", "Aideo");
-        } else {
-            throw new Error("Unknown kind: " + track.kind());
-        }
+        trackInfo.putString("label", track.id());
         trackInfo.putString("kind", track.kind());
         trackInfo.putBoolean("enabled", track.enabled());
         trackInfo.putString("readyState", track.state().toString());

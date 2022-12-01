@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
@@ -36,7 +37,6 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     private final Map<String, DataChannelWrapper> dataChannels;
     private final int id;
-    private int transceiverNextId = 0;
 
     private PeerConnection peerConnection;
     final List<MediaStream> localStreams;
@@ -338,75 +338,76 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         return null;
     }
 
+
     @Override
     public void onAddStream(MediaStream mediaStream) {
-        String streamReactTag = null;
-        String streamId = mediaStream.getId();
-        // The native WebRTC implementation has a special concept of a default
-        // MediaStream instance with the label default that the implementation
-        // reuses.
-        if ("default".equals(streamId)) {
-            for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
-                if (e.getValue().equals(mediaStream)) {
-                    streamReactTag = e.getKey();
-                    break;
-                }
-            }
-        }
-
-        if (streamReactTag == null) {
-            streamReactTag = UUID.randomUUID().toString();
-            remoteStreams.put(streamReactTag, mediaStream);
-        }
-
-        WritableMap params = Arguments.createMap();
-        params.putInt("id", id);
-        params.putString("streamId", streamId);
-        params.putString("streamReactTag", streamReactTag);
-
-        WritableArray tracks = Arguments.createArray();
-
-        for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
-            VideoTrack track = mediaStream.videoTracks.get(i);
-            String trackId = track.id();
-
-            remoteTracks.put(trackId, track);
-
-            WritableMap trackInfo = Arguments.createMap();
-            trackInfo.putString("id", trackId);
-            trackInfo.putString("label", "Video");
-            trackInfo.putString("kind", track.kind());
-            trackInfo.putBoolean("enabled", track.enabled());
-            trackInfo.putString("readyState", track.state().toString());
-            trackInfo.putBoolean("remote", true);
-            tracks.pushMap(trackInfo);
-
-            videoTrackAdapters.addAdapter(streamReactTag, track);
-        }
-        for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
-            AudioTrack track = mediaStream.audioTracks.get(i);
-            String trackId = track.id();
-
-            remoteTracks.put(trackId, track);
-
-            WritableMap trackInfo = Arguments.createMap();
-            trackInfo.putString("id", trackId);
-            trackInfo.putString("label", "Audio");
-            trackInfo.putString("kind", track.kind());
-            trackInfo.putBoolean("enabled", track.enabled());
-            trackInfo.putString("readyState", track.state().toString());
-            trackInfo.putBoolean("remote", true);
-            tracks.pushMap(trackInfo);
-        }
-        params.putArray("tracks", tracks);
-
-        SessionDescription newSdp = peerConnection.getRemoteDescription();
-        WritableMap newSdpMap = Arguments.createMap();
-        newSdpMap.putString("type", newSdp.type.canonicalForm());
-        newSdpMap.putString("sdp", newSdp.description);
-        params.putMap("sdp", newSdpMap);
-
-        webRTCModule.sendEvent("peerConnectionAddedStream", params);
+//        String streamReactTag = null;
+//        String streamId = mediaStream.getId();
+//        // The native WebRTC implementation has a special concept of a default
+//        // MediaStream instance with the label default that the implementation
+//        // reuses.
+//        if ("default".equals(streamId)) {
+//            for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
+//                if (e.getValue().equals(mediaStream)) {
+//                    streamReactTag = e.getKey();
+//                    break;
+//                }
+//            }
+//        }
+//
+//        if (streamReactTag == null) {
+//            streamReactTag = UUID.randomUUID().toString();
+//            remoteStreams.put(streamReactTag, mediaStream);
+//        }
+//
+//        WritableMap params = Arguments.createMap();
+//        params.putInt("id", id);
+//        params.putString("streamId", streamId);
+//        params.putString("streamReactTag", streamReactTag);
+//
+//        WritableArray tracks = Arguments.createArray();
+//
+//        for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
+//            VideoTrack track = mediaStream.videoTracks.get(i);
+//            String trackId = track.id();
+//
+//            remoteTracks.put(trackId, track);
+//
+//            WritableMap trackInfo = Arguments.createMap();
+//            trackInfo.putString("id", trackId);
+//            trackInfo.putString("label", "Video");
+//            trackInfo.putString("kind", track.kind());
+//            trackInfo.putBoolean("enabled", track.enabled());
+//            trackInfo.putString("readyState", track.state().toString());
+//            trackInfo.putBoolean("remote", true);
+//            tracks.pushMap(trackInfo);
+//
+//            videoTrackAdapters.addAdapter(streamReactTag, track);
+//        }
+//        for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
+//            AudioTrack track = mediaStream.audioTracks.get(i);
+//            String trackId = track.id();
+//
+//            remoteTracks.put(trackId, track);
+//
+//            WritableMap trackInfo = Arguments.createMap();
+//            trackInfo.putString("id", trackId);
+//            trackInfo.putString("label", "Audio");
+//            trackInfo.putString("kind", track.kind());
+//            trackInfo.putBoolean("enabled", track.enabled());
+//            trackInfo.putString("readyState", track.state().toString());
+//            trackInfo.putBoolean("remote", true);
+//            tracks.pushMap(trackInfo);
+//        }
+//        params.putArray("tracks", tracks);
+//
+//        SessionDescription newSdp = peerConnection.getRemoteDescription();
+//        WritableMap newSdpMap = Arguments.createMap();
+//        newSdpMap.putString("type", newSdp.type.canonicalForm());
+//        newSdpMap.putString("sdp", newSdp.description);
+//        params.putMap("sdp", newSdpMap);
+//
+//        webRTCModule.sendEvent("peerConnectionAddedStream", params);
     }
 
     @Override
@@ -487,15 +488,59 @@ class PeerConnectionObserver implements PeerConnection.Observer {
     @Override
     public void onAddTrack(final RtpReceiver receiver, final MediaStream[] mediaStreams) {
         Log.d(TAG, "onAddTrack");
-        if (isUnifiedPlan) {
-            MediaStreamTrack track = receiver.track();
-            if (track != null) {
-                if (track.kind().equals(MediaStreamTrack.VIDEO_TRACK_KIND)) {
-                    videoTrackAdapters.addAdapter(UUID.randomUUID().toString(), (VideoTrack) track);
-                }
-                remoteTracks.put(track.id(), track);
-            }
+        MediaStreamTrack track = receiver.track();
+
+        WritableMap receiverResult = Arguments.createMap();
+        receiverResult.putString("id", receiver.id());
+        receiverResult.putMap("track", serializeTrack(track));
+
+        WritableArray streams = Arguments.createArray();
+        for (MediaStream mediaStream : mediaStreams) {
+            WritableMap stream = Arguments.createMap();
+            stream.putString("streamId", mediaStream.getId());
+            stream.putString("streamReactTag", mediaStream.getId());
+            stream.putArray("tracks", extractTracks(mediaStream));
+            streams.pushMap(stream);
         }
+
+        WritableMap event = Arguments.createMap();
+        event.putInt("id", id);
+        event.putMap("receiver", receiverResult);
+        event.putArray("streams", streams);
+
+        webRTCModule.sendEvent("peerConnectionAddedReceiver", event);
+    }
+
+    private ReadableArray extractTracks(MediaStream mediaStream) {
+        WritableArray tracks = Arguments.createArray();
+
+        for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
+            VideoTrack track = mediaStream.videoTracks.get(i);
+            String trackId = track.id();
+
+            remoteTracks.put(trackId, track);
+            tracks.pushMap(serializeTrack(track));
+            videoTrackAdapters.addAdapter(mediaStream.getId(), track);
+        }
+        for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
+            AudioTrack track = mediaStream.audioTracks.get(i);
+            String trackId = track.id();
+            remoteTracks.put(trackId, track);
+            tracks.pushMap(serializeTrack(track));
+        }
+
+        return tracks;
+    }
+
+    private ReadableMap serializeTrack(MediaStreamTrack track) {
+        WritableMap trackInfo = Arguments.createMap();
+        trackInfo.putString("id", track.id());
+        trackInfo.putString("label", track.id());
+        trackInfo.putString("kind", track.kind());
+        trackInfo.putBoolean("enabled", track.enabled());
+        trackInfo.putString("readyState", track.state().toString());
+        trackInfo.putBoolean("remote", true);
+        return trackInfo;
     }
 
     @Nullable
