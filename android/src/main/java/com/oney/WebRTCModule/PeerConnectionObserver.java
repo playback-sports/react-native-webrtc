@@ -496,6 +496,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
         WritableArray streams = Arguments.createArray();
         for (MediaStream mediaStream : mediaStreams) {
+            remoteStreams.put(mediaStream.getId(), mediaStream);
             WritableMap stream = Arguments.createMap();
             stream.putString("streamId", mediaStream.getId());
             stream.putString("streamReactTag", mediaStream.getId());
