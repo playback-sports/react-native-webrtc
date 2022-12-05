@@ -2,12 +2,12 @@ package com.oney.WebRTCModule;
 
 import android.util.Base64;
 import android.util.Log;
+import android.util.SparseArray;
 
 import androidx.annotation.Nullable;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
-import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
@@ -23,6 +23,7 @@ import org.webrtc.RtpTransceiver;
 import org.webrtc.SessionDescription;
 import org.webrtc.VideoTrack;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -37,7 +38,6 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     private final Map<String, DataChannelWrapper> dataChannels;
     private final int id;
-
     private PeerConnection peerConnection;
     final List<MediaStream> localStreams;
     final Map<String, MediaStream> remoteStreams;
@@ -196,7 +196,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         if (dataChannel == null) {
             return null;
         }
-        final String reactTag = UUID.randomUUID().toString();
+        final String reactTag  = UUID.randomUUID().toString();
         DataChannelWrapper dcw = new DataChannelWrapper(webRTCModule, id, reactTag, dataChannel);
         dataChannels.put(reactTag, dcw);
         dataChannel.registerObserver(dcw);
@@ -338,76 +338,77 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         return null;
     }
 
+    private WritableArray extractTracks(MediaStream mediaStream) {
+        WritableArray tracks = Arguments.createArray();
+
+        for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
+            VideoTrack track = mediaStream.videoTracks.get(i);
+            String trackId = track.id();
+            if (remoteTracks.containsKey(trackId)) {
+                continue;
+            }
+            remoteTracks.put(trackId, track);
+            tracks.pushMap(serializeTrack(track));
+            videoTrackAdapters.addAdapter(mediaStream.getId(), track);
+        }
+        for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
+            AudioTrack track = mediaStream.audioTracks.get(i);
+            String trackId = track.id();
+            if (remoteTracks.containsKey(trackId)) {
+                continue;
+            }
+            remoteTracks.put(trackId, track);
+            tracks.pushMap(serializeTrack(track));
+        }
+
+        return tracks;
+    }
+
+    private ReadableMap serializeTrack(MediaStreamTrack track) {
+        WritableMap trackInfo = Arguments.createMap();
+        trackInfo.putString("id", track.id());
+        trackInfo.putString("label", track.id());
+        trackInfo.putString("kind", track.kind());
+        trackInfo.putBoolean("enabled", track.enabled());
+        trackInfo.putString("readyState", track.state().toString());
+        trackInfo.putBoolean("remote", true);
+        return trackInfo;
+    }
+
 
     @Override
     public void onAddStream(MediaStream mediaStream) {
-//        String streamReactTag = null;
-//        String streamId = mediaStream.getId();
-//        // The native WebRTC implementation has a special concept of a default
-//        // MediaStream instance with the label default that the implementation
-//        // reuses.
-//        if ("default".equals(streamId)) {
-//            for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
-//                if (e.getValue().equals(mediaStream)) {
-//                    streamReactTag = e.getKey();
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (streamReactTag == null) {
-//            streamReactTag = UUID.randomUUID().toString();
-//            remoteStreams.put(streamReactTag, mediaStream);
-//        }
-//
-//        WritableMap params = Arguments.createMap();
-//        params.putInt("id", id);
-//        params.putString("streamId", streamId);
-//        params.putString("streamReactTag", streamReactTag);
-//
-//        WritableArray tracks = Arguments.createArray();
-//
-//        for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
-//            VideoTrack track = mediaStream.videoTracks.get(i);
-//            String trackId = track.id();
-//
-//            remoteTracks.put(trackId, track);
-//
-//            WritableMap trackInfo = Arguments.createMap();
-//            trackInfo.putString("id", trackId);
-//            trackInfo.putString("label", "Video");
-//            trackInfo.putString("kind", track.kind());
-//            trackInfo.putBoolean("enabled", track.enabled());
-//            trackInfo.putString("readyState", track.state().toString());
-//            trackInfo.putBoolean("remote", true);
-//            tracks.pushMap(trackInfo);
-//
-//            videoTrackAdapters.addAdapter(streamReactTag, track);
-//        }
-//        for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
-//            AudioTrack track = mediaStream.audioTracks.get(i);
-//            String trackId = track.id();
-//
-//            remoteTracks.put(trackId, track);
-//
-//            WritableMap trackInfo = Arguments.createMap();
-//            trackInfo.putString("id", trackId);
-//            trackInfo.putString("label", "Audio");
-//            trackInfo.putString("kind", track.kind());
-//            trackInfo.putBoolean("enabled", track.enabled());
-//            trackInfo.putString("readyState", track.state().toString());
-//            trackInfo.putBoolean("remote", true);
-//            tracks.pushMap(trackInfo);
-//        }
-//        params.putArray("tracks", tracks);
-//
-//        SessionDescription newSdp = peerConnection.getRemoteDescription();
-//        WritableMap newSdpMap = Arguments.createMap();
-//        newSdpMap.putString("type", newSdp.type.canonicalForm());
-//        newSdpMap.putString("sdp", newSdp.description);
-//        params.putMap("sdp", newSdpMap);
-//
-//        webRTCModule.sendEvent("peerConnectionAddedStream", params);
+        Log.d(TAG, "onAddStream");
+        String streamId = mediaStream.getId();
+        // The native WebRTC implementation has a special concept of a default
+        // MediaStream instance with the label default that the implementation
+        // reuses.
+        if ("default".equals(streamId)) {
+            for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
+                if (e.getValue().equals(mediaStream)) {
+                    streamId = e.getKey();
+                    break;
+                }
+            }
+        }
+
+        remoteStreams.put(streamId, mediaStream);
+
+        WritableMap params = Arguments.createMap();
+        params.putInt("id", id);
+        params.putString("streamId", streamId);
+        params.putString("streamReactTag", streamId);
+
+        WritableArray tracks = extractTracks(mediaStream);
+        params.putArray("tracks", tracks);
+
+        SessionDescription newSdp = peerConnection.getRemoteDescription();
+        WritableMap newSdpMap = Arguments.createMap();
+        newSdpMap.putString("type", newSdp.type.canonicalForm());
+        newSdpMap.putString("sdp", newSdp.description);
+        params.putMap("sdp", newSdpMap);
+
+        webRTCModule.sendEvent("peerConnectionAddedStream", params);
     }
 
     @Override
@@ -443,7 +444,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     @Override
     public void onDataChannel(DataChannel dataChannel) {
-        final String reactTag = UUID.randomUUID().toString();
+        final String reactTag  = UUID.randomUUID().toString();
         DataChannelWrapper dcw = new DataChannelWrapper(webRTCModule, id, reactTag, dataChannel);
         dataChannels.put(reactTag, dcw);
         dataChannel.registerObserver(dcw);
@@ -496,7 +497,6 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
         WritableArray streams = Arguments.createArray();
         for (MediaStream mediaStream : mediaStreams) {
-            remoteStreams.put(mediaStream.getId(), mediaStream);
             WritableMap stream = Arguments.createMap();
             stream.putString("streamId", mediaStream.getId());
             stream.putString("streamReactTag", mediaStream.getId());
@@ -510,38 +510,6 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         event.putArray("streams", streams);
 
         webRTCModule.sendEvent("peerConnectionAddedReceiver", event);
-    }
-
-    private ReadableArray extractTracks(MediaStream mediaStream) {
-        WritableArray tracks = Arguments.createArray();
-
-        for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
-            VideoTrack track = mediaStream.videoTracks.get(i);
-            String trackId = track.id();
-
-            remoteTracks.put(trackId, track);
-            tracks.pushMap(serializeTrack(track));
-            videoTrackAdapters.addAdapter(mediaStream.getId(), track);
-        }
-        for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
-            AudioTrack track = mediaStream.audioTracks.get(i);
-            String trackId = track.id();
-            remoteTracks.put(trackId, track);
-            tracks.pushMap(serializeTrack(track));
-        }
-
-        return tracks;
-    }
-
-    private ReadableMap serializeTrack(MediaStreamTrack track) {
-        WritableMap trackInfo = Arguments.createMap();
-        trackInfo.putString("id", track.id());
-        trackInfo.putString("label", track.id());
-        trackInfo.putString("kind", track.kind());
-        trackInfo.putBoolean("enabled", track.enabled());
-        trackInfo.putString("readyState", track.state().toString());
-        trackInfo.putBoolean("remote", true);
-        return trackInfo;
     }
 
     @Nullable
