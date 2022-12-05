@@ -347,7 +347,6 @@ class PeerConnectionObserver implements PeerConnection.Observer {
             if (remoteTracks.containsKey(trackId)) {
                 continue;
             }
-
             remoteTracks.put(trackId, track);
             tracks.pushMap(serializeTrack(track));
             videoTrackAdapters.addAdapter(mediaStream.getId(), track);
@@ -379,7 +378,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     @Override
     public void onAddStream(MediaStream mediaStream) {
-        String streamReactTag = null;
+        Log.d(TAG, "onAddStream");
         String streamId = mediaStream.getId();
         // The native WebRTC implementation has a special concept of a default
         // MediaStream instance with the label default that the implementation
@@ -387,21 +386,18 @@ class PeerConnectionObserver implements PeerConnection.Observer {
         if ("default".equals(streamId)) {
             for (Map.Entry<String, MediaStream> e : remoteStreams.entrySet()) {
                 if (e.getValue().equals(mediaStream)) {
-                    streamReactTag = e.getKey();
+                    streamId = e.getKey();
                     break;
                 }
             }
         }
 
-        if (streamReactTag == null) {
-            streamReactTag = UUID.randomUUID().toString();
-            remoteStreams.put(streamReactTag, mediaStream);
-        }
+        remoteStreams.put(streamId, mediaStream);
 
         WritableMap params = Arguments.createMap();
         params.putInt("id", id);
         params.putString("streamId", streamId);
-        params.putString("streamReactTag", streamReactTag);
+        params.putString("streamReactTag", streamId);
 
         WritableArray tracks = extractTracks(mediaStream);
         params.putArray("tracks", tracks);
@@ -492,7 +488,7 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
     @Override
     public void onAddTrack(final RtpReceiver receiver, final MediaStream[] mediaStreams) {
-        Log.d(TAG, "onAddTrack!");
+        Log.d(TAG, "onAddTrack");
         MediaStreamTrack track = receiver.track();
 
         WritableMap receiverResult = Arguments.createMap();
