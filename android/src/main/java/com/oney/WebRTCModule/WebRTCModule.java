@@ -683,7 +683,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void mediaStreamTrackSetVolume(String trackId, int volume) {
+    public void mediaStreamTrackSetVolume(String trackId, double volume) {
         ThreadUtils.runOnExecutor(() -> {
             for (int i = 0, size = mPeerConnectionObservers.size(); i < size; i++) {
                 PeerConnectionObserver pco = mPeerConnectionObservers.valueAt(i);
