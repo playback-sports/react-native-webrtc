@@ -343,21 +343,15 @@ class PeerConnectionObserver implements PeerConnection.Observer {
 
         for (int i = 0; i < mediaStream.videoTracks.size(); i++) {
             VideoTrack track = mediaStream.videoTracks.get(i);
-            String trackId = track.id();
-            if (remoteTracks.containsKey(trackId)) {
-                continue;
+            if (!remoteTracks.containsKey(track.id())) {
+                videoTrackAdapters.addAdapter(mediaStream.getId(), track);
             }
-            remoteTracks.put(trackId, track);
+            remoteTracks.put(track.id(), track);
             tracks.pushMap(serializeTrack(track));
-            videoTrackAdapters.addAdapter(mediaStream.getId(), track);
         }
         for (int i = 0; i < mediaStream.audioTracks.size(); i++) {
             AudioTrack track = mediaStream.audioTracks.get(i);
-            String trackId = track.id();
-            if (remoteTracks.containsKey(trackId)) {
-                continue;
-            }
-            remoteTracks.put(trackId, track);
+            remoteTracks.put(track.id(), track);
             tracks.pushMap(serializeTrack(track));
         }
 
