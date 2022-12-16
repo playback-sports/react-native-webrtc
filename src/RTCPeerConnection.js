@@ -1,4 +1,3 @@
-
 import { defineCustomEventTarget } from 'event-target-shim';
 import { NativeModules } from 'react-native';
 
@@ -12,6 +11,7 @@ import RTCSessionDescription from './RTCSessionDescription';
 import RTCIceCandidate from './RTCIceCandidate';
 import RTCIceCandidateEvent from './RTCIceCandidateEvent';
 import RTCEvent from './RTCEvent';
+import RTCRtpTransceiver from './RTCRtpTransceiver';
 import * as RTCUtil from './RTCUtil';
 import EventEmitter from './EventEmitter';
 
@@ -48,6 +48,7 @@ const PEER_CONNECTION_EVENTS = [
     'icegatheringstatechange',
     'negotiationneeded',
     'signalingstatechange',
+    'track',
     'datachannel',
     'addstream',
     'removestream'
@@ -68,6 +69,7 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
     _localStreams: Array<MediaStream> = [];
     _remoteStreams: Array<MediaStream> = [];
     _subscriptions: Array<any>;
+    _transceivers: Array<RTCRtpTransceiver> = [];
 
     constructor(configuration) {
         super();
@@ -94,6 +96,31 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
         WebRTCModule.peerConnectionRemoveStream(stream._reactTag, this._peerConnectionId);
     }
 
+    addTransceiver(source: 'audio' | 'video' | MediaStreamTrack, init) {
+        return new Promise((resolve, reject) => {
+            let src;
+            if (source === 'audio') {
+                src = { type: 'audio' };
+            } else if (source === 'video') {
+                src = { type: 'video' };
+            } else {
+                src = { trackId: track.id };
+            }
+            WebRTCModule.peerConnectionAddTransceiver(
+                this._peerConnectionId,
+                { ...src, init: { ...init } },
+                (successful, data) => {
+                    if (successful) {
+                        this._mergeState(data.state);
+                        resolve(this._transceivers.find(v => v.id === data.id));
+                    } else {
+                        reject(data);
+                    }
+                }
+            );
+        });
+    }
+
     createOffer(options) {
         return new Promise((resolve, reject) => {
             WebRTCModule.peerConnectionCreateOffer(
@@ -101,7 +128,8 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
                 RTCUtil.normalizeOfferAnswerOptions(options),
                 (successful, data) => {
                     if (successful) {
-                        resolve(data);
+                        this._mergeState(data.state);
+                        resolve(new RTCSessionDescription(data.session));
                     } else {
                         reject(data); // TODO: convert to NavigatorUserMediaError
                     }
@@ -117,7 +145,8 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
                 RTCUtil.normalizeOfferAnswerOptions(options),
                 (successful, data) => {
                     if (successful) {
-                        resolve(data);
+                        this._mergeState(data.state);
+                        resolve(new RTCSessionDescription(data.session));
                     } else {
                         reject(data);
                     }
@@ -139,6 +168,7 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
         const newSdp = await WebRTCModule.peerConnectionSetLocalDescription(this._peerConnectionId, desc);
 
         this.localDescription = new RTCSessionDescription(newSdp);
+        this._mergeState(newSdp.state);
     }
 
     setRemoteDescription(sessionDescription: RTCSessionDescription) {
@@ -149,6 +179,7 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
                 (successful, data) => {
                     if (successful) {
                         this.remoteDescription = new RTCSessionDescription(data);
+                        this._mergeState(data.state);
                         resolve();
                     } else {
                         reject(data);
@@ -182,7 +213,7 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
             Native bridge which is a bottleneck that tends to be visible in
             the UI when there is congestion involving UI-related passing.
 
-            TODO Implement the logic for filtering the stats based on 
+            TODO Implement the logic for filtering the stats based on
             the sender/receiver
             */
             return new Map(JSON.parse(data));
@@ -193,8 +224,19 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
         return this._localStreams.slice();
     }
 
+    getReceivers() {
+        return this.getTransceivers().map(t => t.receiver);
+    }
+
     getRemoteStreams() {
         return this._remoteStreams.slice();
+    }
+
+    getSenders() {
+        return this.getTransceivers().map(t => t.sender);
+    }
+    getTransceivers() {
+        return this._transceivers.slice();
     }
 
     close() {
@@ -209,6 +251,34 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
         const stream = this._remoteStreams.find(stream => stream._reactTag === streamReactTag);
 
         return stream && stream._tracks.find(track => track.id === trackId);
+    }
+
+    _getTransceiver(state): RTCRtpTransceiver {
+        const existing = this._transceivers.find(t => t.id === state.id);
+        if (existing) {
+            existing._updateState(state);
+            return existing;
+        } else {
+            let res = new RTCRtpTransceiver(this._peerConnectionId, state, s => this._mergeState(s));
+            this._transceivers.push(res);
+            return res;
+        }
+    }
+    _mergeState(state): void {
+        if (!state) {
+            return;
+        }
+        // Merge Transceivers states
+        if (state.transceivers) {
+            // Apply states
+            for (let transceiver of state.transceivers) {
+                this._getTransceiver(transceiver);
+            }
+            // Restore Order
+            this._transceivers = this._transceivers.map((t, i) =>
+                this._transceivers.find(t2 => t2.id === state.transceivers[i].id)
+            );
+        }
     }
 
     _unregisterEvents(): void {
@@ -261,6 +331,23 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
                 this._remoteStreams.push(stream);
                 this.remoteDescription = new RTCSessionDescription(ev.sdp);
                 this.dispatchEvent(new MediaStreamEvent('addstream', { stream }));
+            }),
+            EventEmitter.addListener('peerConnectionStartedReceivingOnTransceiver', ev => {
+                if (ev.id !== this._peerConnectionId) {
+                    return;
+                }
+                this._getTransceiver(ev.transceiver);
+            }),
+            EventEmitter.addListener('peerConnectionAddedReceiver', ev => {
+                if (ev.id !== this._peerConnectionId) {
+                    return;
+                }
+                if (!ev.streams.length || !ev.receiver) {
+                    return;
+                }
+                const streams = ev.streams;
+                const track = ev.receiver.track;
+                this.dispatchEvent(new MediaStreamTrackEvent('track', { track, streams }));
             }),
             EventEmitter.addListener('peerConnectionRemovedStream', ev => {
                 if (ev.id !== this._peerConnectionId) {

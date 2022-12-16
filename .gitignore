@@ -1,5 +1,6 @@
 # Dependency directory
 # https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
+yarn.lock
 node_modules
 xcuserdata
 project.xcworkspace
@@ -7,6 +8,8 @@ project.xcworkspace
 .idea
 android/build
 android/*.iml
+android/.gradle
+android/local.properties
 daily-co-*.tgz
 
 WebRTC.xcframework
@@ -15,3 +18,4 @@ examples/GumTestApp/package-lock.json
 examples/GumTestApp_macOS/package-lock.json
 *.jar
 *.tgz
+

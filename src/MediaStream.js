@@ -1,9 +1,8 @@
-
-import { NativeModules } from 'react-native';
+import { NativeModules, DeviceEventEmitter } from 'react-native';
 import { defineCustomEventTarget } from 'event-target-shim';
 import uuid from 'uuid';
-
 import MediaStreamTrack from './MediaStreamTrack';
+import MediaStreamTrackEvent from './MediaStreamTrackEvent';
 
 const { WebRTCModule } = NativeModules;
 
@@ -70,6 +69,16 @@ export default class MediaStream extends defineCustomEventTarget(...MEDIA_STREAM
         } else {
             throw new TypeError(`invalid type: ${typeof arg}`);
         }
+
+        DeviceEventEmitter.addListener('mediaStreamTrackMuteChanged', ev => {
+            const track = this.getTrackById(ev.trackId);
+
+            if (track) {
+                track.muted = ev.muted;
+                const eventName = ev.muted ? 'mute' : 'unmute';
+                track.dispatchEvent(new MediaStreamTrackEvent(eventName, { track }));
+            }
+        });
     }
 
     addTrack(track: MediaStreamTrack) {
@@ -104,6 +113,13 @@ export default class MediaStream extends defineCustomEventTarget(...MEDIA_STREAM
 
     getVideoTracks(): Array<MediaStreamTrack> {
         return this._tracks.filter(track => track.kind === 'video');
+    }
+
+    setVolume(volume: number): void {
+        const audioTracks = this.getAudioTracks();
+        audioTracks.forEach(track => {
+            WebRTCModule.mediaStreamTrackSetVolume(track.id, volume);
+        });
     }
 
     clone() {
