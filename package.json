@@ -1,14 +1,14 @@
 {
-  "name": "@daily-co/react-native-webrtc",
-  "version": "106.0.6-daily.1",
+  "name": "@playback-sports/react-native-webrtc",
+  "version": "116.0.6-playback.1",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daily-co/react-native-webrtc.git"
+    "url": "git+https://github.com/playback-sports/react-native-webrtc.git"
   },
   "nativePackage": true,
   "description": "Daily fork of WebRTC for React Native",
   "license": "MIT",
-  "homepage": "https://github.com/daily-co/react-native-webrtc",
+  "homepage": "https://github.com/playback-sports/react-native-webrtc",
   "keywords": [
     "react-component",
     "react-native",
@@ -25,9 +25,7 @@
     "base64-js": "1.5.1",
     "debug": "4.3.4",
     "event-target-shim": "6.0.2",
-    "tar": "6.1.11",
-    "@types/react": "17.0.38",
-    "@types/react-native": "0.66.12"
+    "tar": "6.1.11"
   },
   "peerDependencies": {
     "react-native": ">=0.60.0"
@@ -36,15 +34,16 @@
     "tag": "scripts/tag",
     "prepublishOnly": "npm run tag",
     "lint": "eslint --max-warnings 0 . && tsc --noEmit",
-    "postinstall": "node tools/downloadWebRTC.js",
     "prepare": "husky install && bob build",
-    "format": "clang-format -i ios/RCTWebRTC/* android/src/main/java/com/oney/WebRTCModule/*.java android/src/main/java/com/oney/WebRTCModule/videoEffects/*.java"
+    "format": "clang-format -i ios/RCTWebRTC/* android/src/main/java/com/oney/WebRTCModule/*.java android/src/main/java/com/oney/WebRTCModule/videoEffects/*.java android/src/main/java/com/oney/WebRTCModule/webrtcutils/*.java"
   },
   "bugs": {
     "url": "https://github.com/daily-co/react-native-webrtc/issues"
   },
   "devDependencies": {
     "@types/debug": "4.1.7",
+    "@types/react": "17.0.40",
+    "@types/react-native": "0.67.3",
     "@typescript-eslint/eslint-plugin": "^5.39.0",
     "@typescript-eslint/parser": "^5.39.0",
     "eslint": "^8.24.0",
@@ -66,8 +65,5 @@
       "module",
       "typescript"
     ]
-  },
-  "webrtc-builds": {
-    "android": "https://github.com/jitsi/webrtc/releases/download/v106.0.1/android-webrtc.zip"
   }
 }
