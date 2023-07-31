@@ -1,14 +1,14 @@
 {
-  "name": "@daily-co/react-native-webrtc",
-  "version": "111.0.0-daily.1",
+  "name": "@playback-sports/react-native-webrtc",
+  "version": "111.0.3-playback.1",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daily-co/react-native-webrtc.git"
+    "url": "git+https://github.com/playback-sports/react-native-webrtc.git"
   },
   "nativePackage": true,
   "description": "Daily fork of WebRTC for React Native",
   "license": "MIT",
-  "homepage": "https://github.com/daily-co/react-native-webrtc",
+  "homepage": "https://github.com/playback-sports/react-native-webrtc",
   "keywords": [
     "react-component",
     "react-native",
@@ -21,13 +21,9 @@
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
   "dependencies": {
-    "adm-zip": "0.5.9",
     "base64-js": "1.5.1",
     "debug": "4.3.4",
-    "event-target-shim": "6.0.2",
-    "tar": "6.1.11",
-    "@types/react": "17.0.38",
-    "@types/react-native": "0.66.12"
+    "event-target-shim": "6.0.2"
   },
   "peerDependencies": {
     "react-native": ">=0.60.0"
@@ -44,6 +40,8 @@
   },
   "devDependencies": {
     "@types/debug": "4.1.7",
+    "@types/react": "17.0.40",
+    "@types/react-native": "0.67.3",
     "@typescript-eslint/eslint-plugin": "^5.39.0",
     "@typescript-eslint/parser": "^5.39.0",
     "eslint": "^8.24.0",

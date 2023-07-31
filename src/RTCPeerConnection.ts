@@ -96,10 +96,26 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
 
         const {
             sdpInfo,
+            newTransceivers,
             transceiversInfo
         } = await WebRTCModule.peerConnectionCreateOffer(this._pcId, RTCUtil.normalizeOfferOptions(options));
 
         log.debug(`${this._pcId} createOffer OK`);
+
+        newTransceivers?.forEach(t => {
+            const { transceiverOrder, transceiver } = t;
+            const newSender = new RTCRtpSender({ ...transceiver.sender, track: null });
+            const remoteTrack
+                = transceiver.receiver.track ? new MediaStreamTrack(transceiver.receiver.track) : null;
+            const newReceiver = new RTCRtpReceiver({ ...transceiver.receiver, track: remoteTrack });
+            const newTransceiver = new RTCRtpTransceiver({
+                ...transceiver,
+                sender: newSender,
+                receiver: newReceiver,
+            });
+
+            this._insertTransceiverSorted(transceiverOrder, newTransceiver);
+        });
 
         this._updateTransceivers(transceiversInfo);
 
@@ -732,7 +748,10 @@ export default class RTCPeerConnection extends defineCustomEventTarget(...PEER_C
                 continue;
             }
 
-            transceiver._currentDirection = update.currentDirection;
+            if (update.currentDirection) {
+                transceiver._currentDirection = update.currentDirection;
+            }
+
             transceiver._mid = update.mid;
             transceiver._stopped = Boolean(update.isStopped);
             transceiver._sender._rtpParameters = new RTCRtpSendParameters(update.senderRtpParameters);
